@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <meta name="masofish-build" content="catch-log-recipes-2026-07-18"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MASOFISH - Catch Log</title>
+  <meta name="description" content="Private MASOFISH catch records for identified and manually recorded fish catches."/>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: "#001e40",
+            "primary-container": "#003366",
+            secondary: "#006a65",
+            "secondary-container": "#76f3ea",
+            "on-secondary-container": "#006f69",
+            background: "#f7fafc",
+            surface: "#f7fafc",
+            "surface-container-low": "#f1f4f6",
+            "surface-container-high": "#e5e9eb",
+            "surface-container-lowest": "#ffffff",
+            "outline-variant": "#c3c6d1",
+            "on-surface": "#181c1e",
+            "on-surface-variant": "#43474f",
+            "error-container": "#ffdad6",
+            "on-error-container": "#93000a",
+            error: "#ba1a1a",
+            "tertiary-fixed": "#baeaff",
+            "on-tertiary-fixed": "#001f29"
+          },
+          fontFamily: { sans: ["Inter", "Arial", "sans-serif"] }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { min-height: 100dvh; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 450, 'GRAD' 0, 'opsz' 24; }
+    .catch-modal {
+      position: fixed; inset: 0; z-index: 9998; display: grid; place-items: center;
+      padding: 1rem; background: rgba(0, 19, 43, .58); backdrop-filter: blur(4px);
+    }
+    .catch-modal[hidden] { display: none; }
+    .catch-modal-card {
+      width: min(720px, 100%); max-height: calc(100dvh - 2rem); overflow: auto;
+      border-radius: 1rem; background: #fff; border: 1px solid #c3c6d1;
+      box-shadow: 0 24px 64px rgba(0, 30, 64, .28);
+    }
+    .catch-scroll-lock { overflow: hidden; }
+    .catch-card-image { height: 190px; object-fit: cover; }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase-client.js"></script>
+  <script src="auth-guard.js"></script>
+</head>
+<body class="bg-background text-on-surface font-sans pb-24">
+  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-outline-variant">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+      <a href="index.html" class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary text-3xl">anchor</span>
+        <div>
+          <p class="font-black text-primary leading-none">MASOFISH</p>
+          <p class="text-xs text-on-surface-variant">Private Catch Log</p>
+        </div>
+      </a>
+      <button id="addCatchButton" type="button" class="bg-secondary text-white rounded-xl px-4 py-3 font-extrabold flex items-center gap-2">
+        <span class="material-symbols-outlined">add</span>
+        <span class="hidden sm:inline">Add Catch</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <section class="rounded-2xl bg-primary-container text-white p-6 sm:p-8 relative overflow-hidden">
+      <div class="absolute -right-16 -top-20 w-64 h-64 rounded-full border-[46px] border-secondary-container/10"></div>
+      <div class="relative max-w-3xl">
+        <p class="text-secondary-container text-xs font-extrabold uppercase tracking-[.18em]">Personal fishing records</p>
+        <h1 class="text-3xl sm:text-4xl font-black mt-3">Record identified catches, measurements, locations, and freshness results.</h1>
+        <p class="text-white/75 mt-3">
+          Catch records are private to your account. Identification results can be saved directly from the Fish ID result page.
+        </p>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="rounded-xl border border-outline-variant bg-white p-4">
+        <p class="text-xs uppercase tracking-wider font-bold text-on-surface-variant">Total Catches</p>
+        <p id="totalCatchCount" class="text-2xl font-black text-primary mt-1">0</p>
+      </div>
+      <div class="rounded-xl border border-outline-variant bg-white p-4">
+        <p class="text-xs uppercase tracking-wider font-bold text-on-surface-variant">Total Weight</p>
+        <p id="totalCatchWeight" class="text-2xl font-black text-primary mt-1">0 kg</p>
+      </div>
+      <div class="rounded-xl border border-outline-variant bg-white p-4">
+        <p class="text-xs uppercase tracking-wider font-bold text-on-surface-variant">Species Recorded</p>
+        <p id="speciesCount" class="text-2xl font-black text-primary mt-1">0</p>
+      </div>
+      <div class="rounded-xl border border-outline-variant bg-white p-4">
+        <p class="text-xs uppercase tracking-wider font-bold text-on-surface-variant">Average Freshness</p>
+        <p id="averageFreshness" class="text-2xl font-black text-primary mt-1">—</p>
+      </div>
+    </section>
+
+    <section class="rounded-xl border border-outline-variant bg-white p-4">
+      <div class="grid md:grid-cols-[1fr_190px_170px] gap-3">
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+          <input id="catchSearchInput" type="search" class="w-full rounded-xl border-outline-variant pl-11" placeholder="Search fish, location, or notes…"/>
+        </div>
+        <select id="catchDispositionFilter" class="rounded-xl border-outline-variant">
+          <option value="all">All dispositions</option>
+          <option value="harvested">Harvested</option>
+          <option value="released">Released</option>
+          <option value="sold">Sold</option>
+          <option value="kept">Kept</option>
+          <option value="other">Other</option>
+        </select>
+        <select id="catchSortSelect" class="rounded-xl border-outline-variant">
+          <option value="newest">Newest catch</option>
+          <option value="oldest">Oldest catch</option>
+          <option value="heaviest">Heaviest</option>
+          <option value="freshest">Highest freshness</option>
+        </select>
+      </div>
+    </section>
+
+    <div id="catchLoading" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="h-80 rounded-xl bg-surface-container-high animate-pulse"></div>
+      <div class="h-80 rounded-xl bg-surface-container-high animate-pulse"></div>
+      <div class="h-80 rounded-xl bg-surface-container-high animate-pulse"></div>
+    </div>
+
+    <section id="catchEmpty" hidden class="rounded-xl border border-outline-variant bg-white p-8 text-center">
+      <span class="material-symbols-outlined text-5xl text-secondary">phishing</span>
+      <h2 class="text-xl font-black text-primary mt-3">No catch records found</h2>
+      <p class="text-sm text-on-surface-variant mt-2">Save an identification result or add a catch manually.</p>
+      <button id="emptyAddCatchButton" type="button" class="mt-4 bg-secondary text-white rounded-xl px-5 py-3 font-extrabold">Add Catch</button>
+    </section>
+
+    <section id="catchGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4"></section>
+  </main>
+
+  <div id="catchModal" class="catch-modal" hidden role="dialog" aria-modal="true" aria-labelledby="catchModalTitle">
+    <section class="catch-modal-card">
+      <div class="sticky top-0 z-10 bg-white border-b border-outline-variant p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-widest font-extrabold text-secondary">Catch Record</p>
+          <h2 id="catchModalTitle" class="text-xl font-black text-primary">Add Catch</h2>
+        </div>
+        <button id="closeCatchModalButton" type="button" class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <form id="catchForm" class="p-5 space-y-4">
+        <input id="catchRecordId" type="hidden"/>
+        <div id="catchFormMessage" hidden class="rounded-xl border p-3 text-sm"></div>
+
+        <label class="block">
+          <span class="block text-sm font-extrabold text-primary mb-1.5">Fish or catch name</span>
+          <input id="catchFishName" type="text" maxlength="120" class="w-full rounded-xl border-outline-variant" placeholder="Example: Rabbitfish" required/>
+        </label>
+
+        <div class="grid sm:grid-cols-2 gap-4">
+          <label class="block">
+            <span class="block text-sm font-bold mb-1.5">Local name</span>
+            <input id="catchLocalName" type="text" maxlength="120" class="w-full rounded-xl border-outline-variant" placeholder="Example: Danggit"/>
+          </label>
+          <label class="block">
+            <span class="block text-sm font-bold mb-1.5">Scientific name</span>
+            <input id="catchScientificName" type="text" maxlength="160" class="w-full rounded-xl border-outline-variant" placeholder="Example: Siganus spp."/>
+          </label>
+          <label class="block">
+            <span class="block text-sm font-bold mb-1.5">Weight (kg)</span>
+            <input id="catchWeight" type="number" min="0" max="10000" step="0.01" class="w-full rounded-xl border-outline-variant"/>
+          </label>
+          <label class="block">
+            <span class="block text-sm font-bold mb-1.5">Length (cm)</span>
+            <input id="catchLength" type="number" min="0" max="10000" step="0.1" class="w-full rounded-xl border-outline-variant"/>
+          </label>
+          <label class="block">
+            <span class="block text-sm font-bold mb-1.5">Catch date</span>
+            <input id="catchDate" type="date" class="w-full rounded-xl border-outline-variant" required/>
+          </label>
+          <label class="block">
+            <span class="block text-sm font-bold mb-1.5">Catch time</span>
+            <input id="catchTime" type="time" class="w-full rounded-xl border-outline-variant"/>
+          </label>
+          <label class="block">
+            <span class="block text-sm font-bold mb-1.5">Disposition</span>
+            <select id="catchDisposition" class="w-full rounded-xl border-outline-variant">
+              <option value="harvested">Harvested</option>
+              <option value="released">Released</option>
+              <option value="sold">Sold</option>
+              <option value="kept">Kept</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="block text-sm font-bold mb-1.5">Approximate location</span>
+            <input id="catchLocation" type="text" maxlength="160" class="w-full rounded-xl border-outline-variant" placeholder="Avoid private coordinates"/>
+          </label>
+        </div>
+
+        <label class="block">
+          <span class="block text-sm font-bold mb-1.5">Catch photo</span>
+          <input id="catchImage" type="file" accept="image/jpeg,image/png,image/webp" class="w-full rounded-xl border border-outline-variant p-3"/>
+          <span class="block text-xs text-on-surface-variant mt-1">A new image replaces the existing photo.</span>
+        </label>
+
+        <label class="block">
+          <span class="block text-sm font-bold mb-1.5">Notes</span>
+          <textarea id="catchNotes" rows="4" maxlength="2000" class="w-full rounded-xl border-outline-variant" placeholder="Fishing method, sea conditions, bait, or other observations…"></textarea>
+        </label>
+
+        <div id="catchAiFields" hidden class="rounded-xl bg-surface-container-low p-4">
+          <p class="text-xs uppercase tracking-wider font-extrabold text-secondary">Saved AI result</p>
+          <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
+            <div><span class="block text-on-surface-variant">Identification confidence</span><strong id="catchConfidenceDisplay">—</strong></div>
+            <div><span class="block text-on-surface-variant">Visual freshness</span><strong id="catchFreshnessDisplay">—</strong></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <button id="cancelCatchButton" type="button" class="rounded-xl bg-surface-container-high text-primary p-4 font-extrabold">Cancel</button>
+          <button id="saveCatchButton" type="submit" class="rounded-xl bg-secondary text-white p-4 font-extrabold disabled:opacity-60">Save Catch</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <nav class="fixed bottom-0 left-0 w-full z-50 grid grid-cols-6 items-center px-1 py-2 bg-white border-t border-outline-variant shadow-lg rounded-t-xl">
+    <a class="flex flex-col items-center text-on-surface-variant py-1" href="index.html"><span class="material-symbols-outlined">dashboard</span><span class="text-[10px] font-bold">Home</span></a>
+    <a class="flex flex-col items-center text-on-surface-variant py-1" href="fish-identification.html"><span class="material-symbols-outlined">visibility</span><span class="text-[10px] font-bold">Fish ID</span></a>
+    <a class="flex flex-col items-center text-on-surface-variant py-1" href="tides-weather.html"><span class="material-symbols-outlined">hide</span><span class="text-[10px] font-bold">Tides</span></a>
+    <a class="flex flex-col items-center text-on-surface-variant py-1" href="forum.html"><span class="material-symbols-outlined">forum</span><span class="text-[10px] font-bold">Forum</span></a>
+    <a class="flex flex-col items-center text-on-surface-variant py-1" href="announcements.html"><span class="material-symbols-outlined">campaign</span><span class="text-[10px] font-bold">News</span></a>
+    <a class="flex flex-col items-center text-on-surface-variant py-1" href="recipes.html"><span class="material-symbols-outlined">restaurant</span><span class="text-[10px] font-bold">Recipes</span></a>
+  </nav>
+
+  <script src="catch-log-service.js"></script>
+  <script src="catch-log.js"></script>
+  <script src="auth-ui.js"></script>
+</body>
+</html>

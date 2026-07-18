@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <meta name="masofish-build" content="catch-log-recipes-2026-07-18"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MASOFISH - Fish Recipes</title>
+  <meta name="description" content="Search, save, view and administer practical fish recipes in MASOFISH."/>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: "#001e40",
+            "primary-container": "#003366",
+            secondary: "#006a65",
+            "secondary-container": "#76f3ea",
+            "on-secondary-container": "#006f69",
+            background: "#f7fafc",
+            surface: "#f7fafc",
+            "surface-container-low": "#f1f4f6",
+            "surface-container-high": "#e5e9eb",
+            "surface-container-lowest": "#ffffff",
+            "outline-variant": "#c3c6d1",
+            "on-surface": "#181c1e",
+            "on-surface-variant": "#43474f",
+            "error-container": "#ffdad6",
+            "on-error-container": "#93000a",
+            error: "#ba1a1a",
+            "tertiary-fixed": "#baeaff",
+            "on-tertiary-fixed": "#001f29"
+          },
+          fontFamily: { sans: ["Inter", "Arial", "sans-serif"] }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { min-height: 100dvh; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 450, 'GRAD' 0, 'opsz' 24; }
+    .recipe-modal {
+      position: fixed; inset: 0; z-index: 9998; display: grid; place-items: center;
+      padding: 1rem; background: rgba(0, 19, 43, .58); backdrop-filter: blur(4px);
+    }
+    .recipe-modal[hidden] { display: none; }
+    .recipe-modal-card {
+      width: min(820px, 100%); max-height: calc(100dvh - 2rem); overflow: auto;
+      border-radius: 1rem; background: white; border: 1px solid #c3c6d1;
+      box-shadow: 0 24px 64px rgba(0,30,64,.28);
+    }
+    .recipe-scroll-lock { overflow: hidden; }
+    .recipe-image { height: 220px; object-fit: cover; }
+    .recipe-chip[aria-pressed="true"] { background: #003366; color: #fff; border-color: #003366; }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase-client.js"></script>
+  <script src="auth-guard.js"></script>
+</head>
+<body class="bg-background text-on-surface font-sans pb-24">
+  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-outline-variant">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+      <a href="index.html" class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary text-3xl">anchor</span>
+        <div><p class="font-black text-primary leading-none">MASOFISH</p><p class="text-xs text-on-surface-variant">Fish Recipes</p></div>
+      </a>
+      <button id="addRecipeButton" hidden type="button" class="bg-secondary text-white rounded-xl px-4 py-3 font-extrabold flex items-center gap-2">
+        <span class="material-symbols-outlined">add</span><span class="hidden sm:inline">Add Recipe</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <section class="rounded-2xl bg-primary-container text-white p-6 sm:p-8 relative overflow-hidden">
+      <div class="absolute -right-16 -top-20 w-64 h-64 rounded-full border-[46px] border-secondary-container/10"></div>
+      <div class="relative max-w-3xl">
+        <p class="text-secondary-container text-xs font-extrabold uppercase tracking-[.18em]">Ocean-to-table guides</p>
+        <h1 class="text-3xl sm:text-4xl font-black mt-3">Find practical recipes for the fish you identify or catch.</h1>
+        <p class="text-white/75 mt-3">Open complete ingredients and instructions, save favorites, or search by fish and recipe category.</p>
+      </div>
+    </section>
+
+    <section id="recipeDatabaseNotice" hidden class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+      Run <code class="bg-white/70 px-1 rounded">supabase-catch-recipes-schema.sql</code> in Supabase to enable shared recipes and favorites. Prototype recipes are currently shown.
+    </section>
+
+    <section class="rounded-xl border border-outline-variant bg-white p-4 space-y-4">
+      <div class="grid md:grid-cols-[1fr_190px] gap-3">
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+          <input id="recipeSearchInput" type="search" class="w-full rounded-xl border-outline-variant pl-11" placeholder="Search recipe, fish, or ingredient…"/>
+        </div>
+        <select id="recipeSortSelect" class="rounded-xl border-outline-variant">
+          <option value="newest">Newest</option>
+          <option value="quickest">Quickest</option>
+          <option value="favorites">Most favorited</option>
+          <option value="name">Recipe name</option>
+        </select>
+      </div>
+      <div id="recipeCategoryFilters" class="flex gap-2 overflow-x-auto pb-1">
+        <button class="recipe-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="all" aria-pressed="true">All Recipes</button>
+        <button class="recipe-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="quick">Quick Meals</button>
+        <button class="recipe-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="traditional">Traditional</button>
+        <button class="recipe-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="grilled">Grilled</button>
+        <button class="recipe-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="soup">Soups</button>
+        <button class="recipe-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="smoked">Smoked</button>
+        <button class="recipe-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="favorites" aria-pressed="false">My Favorites</button>
+      </div>
+    </section>
+
+    <div class="flex items-center justify-between gap-3">
+      <div><h2 class="text-2xl font-black text-primary">Recipe Library</h2><p id="recipeStatus" class="text-sm text-on-surface-variant">Loading recipes…</p></div>
+    </div>
+
+    <div id="recipeLoading" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="h-96 rounded-xl bg-surface-container-high animate-pulse"></div>
+      <div class="h-96 rounded-xl bg-surface-container-high animate-pulse"></div>
+      <div class="h-96 rounded-xl bg-surface-container-high animate-pulse"></div>
+    </div>
+
+    <section id="recipeEmpty" hidden class="rounded-xl border border-outline-variant bg-white p-8 text-center">
+      <span class="material-symbols-outlined text-5xl text-secondary">restaurant</span>
+      <h2 class="text-xl font-black text-primary mt-3">No recipes found</h2>
+      <p class="text-sm text-on-surface-variant mt-2">Try another search or category.</p>
+    </section>
+
+    <section id="recipeGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4"></section>
+
+    <section class="rounded-xl bg-tertiary-fixed text-on-tertiary-fixed border border-outline-variant p-5">
+      <h2 class="font-black text-lg flex items-center gap-2"><span class="material-symbols-outlined">health_and_safety</span>Food Safety Reminder</h2>
+      <p class="text-sm mt-2">Use properly handled fish, maintain safe temperatures, cook seafood thoroughly when appropriate, and follow trusted food-safety guidance. A MASOFISH freshness score is not proof of safety.</p>
+    </section>
+  </main>
+
+  <div id="recipeDetailModal" class="recipe-modal" hidden role="dialog" aria-modal="true" aria-labelledby="recipeDetailTitle">
+    <section class="recipe-modal-card">
+      <div class="sticky top-0 z-10 bg-white border-b border-outline-variant p-4 flex items-center justify-between">
+        <div><p class="text-xs uppercase tracking-widest font-extrabold text-secondary">Recipe Guide</p><h2 id="recipeDetailTitle" class="text-xl font-black text-primary">Recipe</h2></div>
+        <button id="closeRecipeDetailButton" type="button" class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div id="recipeDetailContent"></div>
+    </section>
+  </div>
+
+  <div id="recipeAdminModal" class="recipe-modal" hidden role="dialog" aria-modal="true" aria-labelledby="recipeAdminTitle">
+    <section class="recipe-modal-card">
+      <div class="sticky top-0 z-10 bg-white border-b border-outline-variant p-4 flex items-center justify-between">
+        <div><p class="text-xs uppercase tracking-widest font-extrabold text-secondary">System Administrator</p><h2 id="recipeAdminTitle" class="text-xl font-black text-primary">Add Recipe</h2></div>
+        <button id="closeRecipeAdminButton" type="button" class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center"><span class="material-symbols-outlined">close</span></button>
+      </div>
+
+      <form id="recipeAdminForm" class="p-5 space-y-4">
+        <input id="recipeRecordId" type="hidden"/>
+        <div id="recipeFormMessage" hidden class="rounded-xl border p-3 text-sm"></div>
+
+        <div class="grid sm:grid-cols-2 gap-4">
+          <label class="block sm:col-span-2"><span class="block text-sm font-extrabold text-primary mb-1.5">Recipe name</span><input id="recipeName" type="text" maxlength="160" class="w-full rounded-xl border-outline-variant" required/></label>
+          <label class="block"><span class="block text-sm font-bold mb-1.5">Fish name</span><input id="recipeFishName" type="text" maxlength="120" class="w-full rounded-xl border-outline-variant" required/></label>
+          <label class="block"><span class="block text-sm font-bold mb-1.5">Category</span><select id="recipeCategory" class="w-full rounded-xl border-outline-variant"><option value="quick">Quick Meals</option><option value="traditional">Traditional</option><option value="grilled">Grilled</option><option value="soup">Soup</option><option value="smoked">Smoked</option><option value="other">Other</option></select></label>
+          <label class="block"><span class="block text-sm font-bold mb-1.5">Preparation time (minutes)</span><input id="recipePrepTime" type="number" min="1" max="1440" class="w-full rounded-xl border-outline-variant" required/></label>
+          <label class="block"><span class="block text-sm font-bold mb-1.5">Difficulty</span><select id="recipeDifficulty" class="w-full rounded-xl border-outline-variant"><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
+          <label class="block"><span class="block text-sm font-bold mb-1.5">Servings</span><input id="recipeServings" type="number" min="1" max="100" class="w-full rounded-xl border-outline-variant" value="4"/></label>
+          <label class="block"><span class="block text-sm font-bold mb-1.5">Image file</span><input id="recipeImageFile" type="file" accept="image/jpeg,image/png,image/webp" class="w-full rounded-xl border border-outline-variant p-3"/></label>
+          <label class="block sm:col-span-2"><span class="block text-sm font-bold mb-1.5">Image URL <span class="font-normal text-on-surface-variant">(optional alternative)</span></span><input id="recipeImageUrl" type="url" class="w-full rounded-xl border-outline-variant"/></label>
+        </div>
+
+        <label class="block"><span class="block text-sm font-bold mb-1.5">Short description</span><textarea id="recipeDescription" rows="3" maxlength="600" class="w-full rounded-xl border-outline-variant" required></textarea></label>
+        <label class="block"><span class="block text-sm font-bold mb-1.5">Ingredients — one per line</span><textarea id="recipeIngredients" rows="7" class="w-full rounded-xl border-outline-variant" required></textarea></label>
+        <label class="block"><span class="block text-sm font-bold mb-1.5">Instructions — one step per line</span><textarea id="recipeInstructions" rows="8" class="w-full rounded-xl border-outline-variant" required></textarea></label>
+
+        <label class="flex items-center gap-3 rounded-xl bg-surface-container-low p-3"><input id="recipePublished" type="checkbox" checked/><span class="text-sm font-bold">Published and visible to users</span></label>
+
+        <div class="grid grid-cols-2 gap-3">
+          <button id="cancelRecipeAdminButton" type="button" class="rounded-xl bg-surface-container-high text-primary p-4 font-extrabold">Cancel</button>
+          <button id="saveRecipeButton" type="submit" class="rounded-xl bg-secondary text-white p-4 font-extrabold disabled:opacity-60">Save Recipe</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <nav class="fixed bottom-0 left-0 w-full z-50 grid grid-cols-6 items-center px-1 py-2 bg-white border-t border-outline-variant shadow-lg rounded-t-xl">
+    <a class="flex flex-col items-center text-on-surface-variant py-1" href="index.html"><span class="material-symbols-outlined">dashboard</span><span class="text-[10px] font-bold">Home</span></a>
+    <a class="flex flex-col items-center text-on-surface-variant py-1" href="fish-identification.html"><span class="material-symbols-outlined">visibility</span><span class="text-[10px] font-bold">Fish ID</span></a>
+    <a class="flex flex-col items-center text-on-surface-variant py-1" href="tides-weather.html"><span class="material-symbols-outlined">hide</span><span class="text-[10px] font-bold">Tides</span></a>
+    <a class="flex flex-col items-center text-on-surface-variant py-1" href="forum.html"><span class="material-symbols-outlined">forum</span><span class="text-[10px] font-bold">Forum</span></a>
+    <a class="flex flex-col items-center text-on-surface-variant py-1" href="announcements.html"><span class="material-symbols-outlined">campaign</span><span class="text-[10px] font-bold">News</span></a>
+    <a class="flex flex-col items-center bg-primary-container text-white rounded-full py-1" href="recipes.html"><span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;">restaurant</span><span class="text-[10px] font-bold">Recipes</span></a>
+  </nav>
+
+  <script src="recipes.js"></script>
+  <script src="auth-ui.js"></script>
+</body>
+</html>

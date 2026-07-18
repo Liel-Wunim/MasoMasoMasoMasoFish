@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="masofish-build" content="supabase-auth-ready-2026-07-17"/>
+  <title>MASOFISH - Login or Sign Up</title>
+  <meta name="description" content="Sign in or create a MASOFISH user account."/>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: "#001e40",
+            "primary-container": "#003366",
+            secondary: "#006a65",
+            "secondary-container": "#76f3ea",
+            surface: "#f7fafc",
+            "surface-low": "#f1f4f6",
+            outline: "#737780",
+            "outline-variant": "#c3c6d1"
+          },
+          fontFamily: { sans: ["Inter", "Arial", "sans-serif"] }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { min-height: 100dvh; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+    .auth-tab {
+      border: 0; border-radius: .65rem; padding: .8rem 1rem; color: #43474f;
+      font-weight: 800; background: transparent; transition: .15s ease;
+    }
+    .auth-tab-active { background: #003366; color: #fff; box-shadow: 0 6px 16px rgba(0,30,64,.18); }
+    .auth-field { width: 100%; border: 1px solid #c3c6d1; border-radius: .75rem; padding: .85rem 1rem; background: #fff; }
+    .auth-field:focus { outline: 2px solid #006a65; outline-offset: 1px; border-color: #006a65; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase-client.js"></script>
+</head>
+<body class="bg-surface text-slate-900 font-sans">
+  <main class="min-h-screen grid lg:grid-cols-[1.05fr_.95fr]">
+    <section class="hidden lg:flex relative overflow-hidden bg-primary-container text-white p-12 flex-col justify-between">
+      <div class="absolute -right-24 -top-24 w-96 h-96 rounded-full border-[70px] border-secondary-container/10"></div>
+      <div class="absolute -left-20 -bottom-28 w-96 h-96 rounded-full bg-secondary/20 blur-3xl"></div>
+
+      <div class="relative flex items-center gap-3">
+        <span class="material-symbols-outlined text-secondary-container text-3xl">anchor</span>
+        <span class="text-2xl font-black tracking-tight">MASOFISH</span>
+      </div>
+
+      <div class="relative max-w-xl">
+        <p class="text-secondary-container font-bold tracking-widest uppercase text-sm">Fisherman Assistance System</p>
+        <h1 class="text-5xl font-black leading-tight mt-4">
+          Identify catches and review fishing conditions from one secure account.
+        </h1>
+        <p class="text-white/75 text-lg leading-relaxed mt-5">
+          Access fish identification, visual freshness scoring, weather, tide and wave information,
+          announcements, and fish recipes.
+        </p>
+      </div>
+
+      <p class="relative text-white/60 text-sm">
+        Marine Assistance System Organized for Fish Identification, Safety, and Harvesting
+      </p>
+    </section>
+
+    <section class="px-5 py-8 sm:px-10 lg:px-14 flex items-center justify-center">
+      <div class="w-full max-w-md">
+        <div class="lg:hidden flex items-center justify-center gap-2 mb-8">
+          <span class="material-symbols-outlined text-primary text-3xl">anchor</span>
+          <span class="text-2xl font-black text-primary">MASOFISH</span>
+        </div>
+
+        <section id="setupPanel" hidden class="bg-white border border-outline-variant rounded-2xl shadow-xl overflow-hidden">
+          <div class="bg-primary-container text-white p-6">
+            <p class="text-secondary-container font-bold uppercase tracking-widest text-xs">Supabase Setup Required</p>
+            <h1 class="text-2xl font-black mt-2">Connect the login system</h1>
+            <p class="text-white/75 mt-2 text-sm">
+              The login and sign-up interface is installed, but the Supabase project URL and public key still need to be added.
+            </p>
+          </div>
+          <div class="p-6 space-y-4">
+            <ol class="list-decimal pl-5 space-y-2 text-sm text-slate-700">
+              <li>Create or open a Supabase project.</li>
+              <li>Open <strong>Project Settings → API</strong>.</li>
+              <li>Copy the Project URL and Publishable/anon key.</li>
+              <li>Paste them into <code class="bg-slate-100 px-1 py-.5 rounded">supabase-config.js</code>.</li>
+              <li>Add the Vercel domain to the Supabase Auth URL settings.</li>
+            </ol>
+            <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
+              Never put the Supabase <strong>service_role</strong> key in this browser application.
+            </div>
+            <button id="continuePrototype" type="button" class="w-full bg-secondary text-white rounded-xl p-4 font-extrabold">
+              Continue in Prototype Mode
+            </button>
+            <p class="text-xs text-slate-500 text-center">
+              Prototype mode skips real authentication and is only intended for testing the interface.
+            </p>
+          </div>
+        </section>
+
+        <section id="authPanel" class="bg-white border border-outline-variant rounded-2xl shadow-xl overflow-hidden">
+          <div class="p-6 sm:p-7">
+            <div class="mb-6">
+              <p class="text-secondary font-extrabold uppercase tracking-widest text-xs">Welcome to MASOFISH</p>
+              <h1 class="text-3xl font-black text-primary mt-2">Access your account</h1>
+              <p class="text-sm text-slate-600 mt-2">Sign in or create a user account using email and password.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 bg-surface-low rounded-xl p-1.5 mb-5" role="tablist">
+              <button id="loginTab" class="auth-tab auth-tab-active" type="button" role="tab" aria-selected="true">Login</button>
+              <button id="signupTab" class="auth-tab" type="button" role="tab" aria-selected="false">Sign Up</button>
+            </div>
+
+            <div id="authMessage" hidden class="rounded-xl border p-3 text-sm mb-4"></div>
+
+            <form id="loginForm" class="space-y-4">
+              <label class="block">
+                <span class="block text-sm font-bold text-primary mb-1.5">Email address</span>
+                <input id="loginEmail" class="auth-field" type="email" autocomplete="email" placeholder="name@example.com" required/>
+              </label>
+
+              <label class="block">
+                <span class="flex justify-between items-center mb-1.5">
+                  <span class="text-sm font-bold text-primary">Password</span>
+                  <button id="forgotPassword" type="button" class="text-xs font-bold text-secondary">Forgot password?</button>
+                </span>
+                <span class="relative block">
+                  <input id="loginPassword" class="auth-field pr-16" type="password" autocomplete="current-password" placeholder="Enter your password" required/>
+                  <button data-toggle-password="loginPassword" type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary">Show</button>
+                </span>
+              </label>
+
+              <button type="submit" class="w-full bg-primary text-white rounded-xl p-4 font-extrabold disabled:opacity-60">
+                Sign In
+              </button>
+            </form>
+
+            <form id="signupForm" hidden class="space-y-4">
+              <label class="block">
+                <span class="block text-sm font-bold text-primary mb-1.5">Complete name</span>
+                <input id="signupName" class="auth-field" type="text" autocomplete="name" placeholder="Juan Dela Cruz" required/>
+              </label>
+
+              <label class="block">
+                <span class="block text-sm font-bold text-primary mb-1.5">Email address</span>
+                <input id="signupEmail" class="auth-field" type="email" autocomplete="email" placeholder="name@example.com" required/>
+              </label>
+
+              <label class="block">
+                <span class="block text-sm font-bold text-primary mb-1.5">Password</span>
+                <span class="relative block">
+                  <input id="signupPassword" class="auth-field pr-16" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required/>
+                  <button data-toggle-password="signupPassword" type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary">Show</button>
+                </span>
+              </label>
+
+              <label class="block">
+                <span class="block text-sm font-bold text-primary mb-1.5">Confirm password</span>
+                <span class="relative block">
+                  <input id="signupConfirmPassword" class="auth-field pr-16" type="password" autocomplete="new-password" minlength="8" placeholder="Repeat your password" required/>
+                  <button data-toggle-password="signupConfirmPassword" type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary">Show</button>
+                </span>
+              </label>
+
+              <button type="submit" class="w-full bg-secondary text-white rounded-xl p-4 font-extrabold disabled:opacity-60">
+                Create Account
+              </button>
+
+              <p class="text-xs text-slate-500 leading-relaxed text-center">
+                New accounts are created as regular MASOFISH users. Administrator access should be assigned manually.
+              </p>
+            </form>
+          </div>
+        </section>
+
+        <p class="text-center text-xs text-slate-500 mt-5">
+          Authentication protects account access. Supabase Row Level Security should also be enabled for private database records.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script src="auth.js"></script>
+</body>
+</html>

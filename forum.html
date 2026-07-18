@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <meta name="masofish-build" content="community-forum-2026-07-18"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MASOFISH - Community Forum</title>
+  <meta name="description" content="MASOFISH community forum for catch posts, fishing discussions, questions, tips and safety information."/>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-surface-variant": "#43474f",
+            "on-surface": "#181c1e",
+            "background": "#f7fafc",
+            "surface-container-high": "#e5e9eb",
+            "surface-container-low": "#f1f4f6",
+            "outline": "#737780",
+            "outline-variant": "#c3c6d1",
+            "secondary": "#006a65",
+            "secondary-container": "#76f3ea",
+            "on-secondary-container": "#006f69",
+            "on-secondary": "#ffffff",
+            "tertiary-fixed": "#baeaff",
+            "on-tertiary-fixed": "#001f29",
+            "surface": "#f7fafc",
+            "surface-container-lowest": "#ffffff",
+            "primary": "#001e40",
+            "primary-container": "#003366",
+            "on-primary": "#ffffff",
+            "on-primary-container": "#ffffff",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6",
+            "on-error-container": "#93000a"
+          },
+          fontFamily: { sans: ["Inter", "Arial", "sans-serif"] }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { min-height: 100dvh; }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 450, 'GRAD' 0, 'opsz' 24;
+    }
+    .forum-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      background: rgba(0, 19, 43, .58);
+      backdrop-filter: blur(4px);
+    }
+    .forum-modal[hidden] { display: none; }
+    .forum-modal-card {
+      width: min(720px, 100%);
+      max-height: calc(100dvh - 2rem);
+      overflow: auto;
+      border-radius: 1rem;
+      background: white;
+      border: 1px solid #c3c6d1;
+      box-shadow: 0 24px 64px rgba(0, 30, 64, .28);
+    }
+    .forum-chip[aria-pressed="true"] {
+      background: #003366;
+      color: white;
+      border-color: #003366;
+    }
+    .forum-line-clamp {
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .forum-post-image {
+      max-height: 420px;
+      object-fit: cover;
+    }
+    .forum-scroll-lock { overflow: hidden; }
+    @media (max-width: 520px) {
+      .forum-bottom-label { font-size: 9px; }
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase-client.js"></script>
+  <script src="auth-guard.js"></script>
+</head>
+<body class="bg-background text-on-surface font-sans pb-24">
+  <header class="sticky top-0 z-50 bg-surface-container-lowest/95 backdrop-blur border-b border-outline-variant">
+    <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+      <a href="index.html" class="flex items-center gap-3 min-w-0">
+        <span class="material-symbols-outlined text-primary text-3xl">anchor</span>
+        <div class="min-w-0">
+          <p class="font-black text-primary leading-none">MASOFISH</p>
+          <p class="text-xs text-on-surface-variant truncate">Community Forum</p>
+        </div>
+      </a>
+      <div class="flex items-center gap-2">
+        <button id="refreshForumButton" type="button" class="w-10 h-10 rounded-full border border-outline-variant bg-white text-primary flex items-center justify-center" aria-label="Refresh forum">
+          <span class="material-symbols-outlined">refresh</span>
+        </button>
+        <button id="openPostComposerButton" type="button" class="bg-secondary text-on-secondary rounded-xl px-4 py-3 font-extrabold flex items-center gap-2">
+          <span class="material-symbols-outlined">edit_square</span>
+          <span class="hidden sm:inline">New Post</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-6 space-y-6">
+<section>
+  <div data-masofish-safety-banner class="rounded-xl border p-4 bg-surface-container-high text-on-surface-variant">
+    Loading sea-safety conditions…
+  </div>
+</section>
+
+    <section class="relative overflow-hidden rounded-2xl bg-primary-container text-white p-6 sm:p-8">
+      <div class="absolute -right-16 -top-20 w-64 h-64 rounded-full border-[46px] border-secondary-container/10"></div>
+      <div class="absolute -left-20 -bottom-24 w-64 h-64 rounded-full bg-secondary/25 blur-3xl"></div>
+      <div class="relative max-w-2xl">
+        <p class="text-secondary-container text-xs font-extrabold uppercase tracking-[.18em]">Fishermen helping fishermen</p>
+        <h1 class="text-3xl sm:text-4xl font-black mt-3">Share catches, ask questions, and join community discussions.</h1>
+        <p class="text-white/75 mt-3 leading-relaxed">
+          Post catch photos, exchange fishing tips, discuss weather and safety, or ask other community members for advice.
+        </p>
+        <button id="heroPostButton" type="button" class="mt-5 bg-secondary-container text-primary rounded-xl px-5 py-3 font-extrabold flex items-center gap-2">
+          <span class="material-symbols-outlined">add_comment</span>
+          Create a Discussion
+        </button>
+      </div>
+    </section>
+
+    <section id="forumSetupNotice" hidden class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+      <div class="flex items-start gap-3">
+        <span class="material-symbols-outlined">database</span>
+        <div>
+          <h2 class="font-extrabold">Forum database setup is required</h2>
+          <p class="text-sm mt-1">
+            Run <code class="bg-white/70 px-1 rounded">supabase-forum-schema.sql</code> in the Supabase SQL Editor.
+            The forum currently remains available in prototype mode.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-3" aria-label="Forum statistics">
+      <div class="bg-white border border-outline-variant rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wider text-on-surface-variant font-bold">Discussions</p>
+        <p id="postCount" class="text-2xl font-black text-primary mt-1">0</p>
+      </div>
+      <div class="bg-white border border-outline-variant rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wider text-on-surface-variant font-bold">Comments</p>
+        <p id="commentCount" class="text-2xl font-black text-primary mt-1">0</p>
+      </div>
+      <div class="bg-white border border-outline-variant rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wider text-on-surface-variant font-bold">Appreciations</p>
+        <p id="likeCount" class="text-2xl font-black text-primary mt-1">0</p>
+      </div>
+      <div class="bg-white border border-outline-variant rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wider text-on-surface-variant font-bold">Your Posts</p>
+        <p id="yourPostCount" class="text-2xl font-black text-primary mt-1">0</p>
+      </div>
+    </section>
+
+    <section class="bg-white border border-outline-variant rounded-xl p-4 space-y-4">
+      <div class="relative">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+        <input id="forumSearchInput" type="search" class="w-full rounded-xl border-outline-variant pl-11 pr-4 py-3" placeholder="Search catches and discussions…"/>
+      </div>
+      <div id="forumCategoryFilters" class="flex gap-2 overflow-x-auto pb-1">
+        <button class="forum-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="all" aria-pressed="true">All</button>
+        <button class="forum-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="catch" aria-pressed="false">Catches</button>
+        <button class="forum-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="question" aria-pressed="false">Questions</button>
+        <button class="forum-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="tip" aria-pressed="false">Tips</button>
+        <button class="forum-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="safety" aria-pressed="false">Safety</button>
+        <button class="forum-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="market" aria-pressed="false">Market</button>
+        <button class="forum-chip shrink-0 rounded-full border border-outline-variant px-4 py-2 text-sm font-bold" data-category="general" aria-pressed="false">General</button>
+      </div>
+    </section>
+
+    <div class="grid lg:grid-cols-[minmax(0,1fr)_280px] gap-6 items-start">
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-xl font-black text-primary">Latest Discussions</h2>
+            <p id="feedStatus" class="text-sm text-on-surface-variant">Loading community posts…</p>
+          </div>
+          <select id="forumSortSelect" class="rounded-xl border-outline-variant text-sm">
+            <option value="newest">Newest</option>
+            <option value="popular">Most appreciated</option>
+            <option value="discussed">Most discussed</option>
+          </select>
+        </div>
+
+        <div id="forumLoading" class="space-y-4">
+          <div class="h-44 rounded-xl bg-surface-container-high animate-pulse"></div>
+          <div class="h-56 rounded-xl bg-surface-container-high animate-pulse"></div>
+        </div>
+
+        <div id="forumEmpty" hidden class="bg-white border border-outline-variant rounded-xl p-8 text-center">
+          <span class="material-symbols-outlined text-5xl text-secondary">forum</span>
+          <h3 class="text-xl font-black text-primary mt-3">No discussions found</h3>
+          <p class="text-sm text-on-surface-variant mt-2">Start a new post or change the search filters.</p>
+          <button id="emptyPostButton" type="button" class="mt-4 bg-secondary text-white rounded-xl px-5 py-3 font-extrabold">Create the First Post</button>
+        </div>
+
+        <div id="forumFeed" class="space-y-4"></div>
+      </section>
+
+      <aside class="space-y-4 lg:sticky lg:top-24">
+        <section class="bg-tertiary-fixed text-on-tertiary-fixed rounded-xl border border-outline-variant p-4">
+          <h2 class="font-black flex items-center gap-2">
+            <span class="material-symbols-outlined">groups</span>
+            Community Guidelines
+          </h2>
+          <ul class="mt-3 text-sm space-y-2 list-disc pl-5">
+            <li>Be respectful and keep discussions helpful.</li>
+            <li>Do not share exact private fishing spots without permission.</li>
+            <li>Verify safety and protected-species information with official sources.</li>
+            <li>Do not post harmful, deceptive, or inappropriate content.</li>
+          </ul>
+        </section>
+
+        <section class="bg-white border border-outline-variant rounded-xl p-4">
+          <h2 class="font-black text-primary flex items-center gap-2">
+            <span class="material-symbols-outlined">photo_camera</span>
+            Catch Post Tips
+          </h2>
+          <p class="text-sm text-on-surface-variant mt-2">
+            Include the fish name, approximate area, catch date, fishing method, and a clear photo to make the discussion more useful.
+          </p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Create Post Modal -->
+  <div id="postComposerModal" class="forum-modal" hidden role="dialog" aria-modal="true" aria-labelledby="postComposerTitle">
+    <section class="forum-modal-card">
+      <div class="sticky top-0 bg-white border-b border-outline-variant p-4 flex items-center justify-between z-10">
+        <div>
+          <p class="text-xs uppercase tracking-widest font-extrabold text-secondary">Community Post</p>
+          <h2 id="postComposerTitle" class="text-xl font-black text-primary">Create a Discussion</h2>
+        </div>
+        <button id="closePostComposerButton" type="button" class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center" aria-label="Close post composer">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <form id="forumPostForm" class="p-5 space-y-4">
+        <div id="postFormMessage" hidden class="rounded-xl border p-3 text-sm"></div>
+
+        <label class="block">
+          <span class="block text-sm font-extrabold text-primary mb-1.5">Post category</span>
+          <select id="postCategory" class="w-full rounded-xl border-outline-variant" required>
+            <option value="catch">Catch Story</option>
+            <option value="question">Question</option>
+            <option value="tip">Fishing Tip</option>
+            <option value="safety">Safety Discussion</option>
+            <option value="market">Market Discussion</option>
+            <option value="general">General Discussion</option>
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="block text-sm font-extrabold text-primary mb-1.5">Title</span>
+          <input id="postTitle" type="text" maxlength="120" class="w-full rounded-xl border-outline-variant" placeholder="What would you like to discuss?" required/>
+          <span class="text-xs text-on-surface-variant mt-1 block">3–120 characters</span>
+        </label>
+
+        <label class="block">
+          <span class="block text-sm font-extrabold text-primary mb-1.5">Post details</span>
+          <textarea id="postContent" maxlength="5000" rows="6" class="w-full rounded-xl border-outline-variant" placeholder="Share your catch story, question, advice, or discussion topic…" required></textarea>
+        </label>
+
+        <fieldset class="rounded-xl border border-outline-variant p-4">
+          <legend class="px-2 text-sm font-extrabold text-primary">Optional catch information</legend>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <label class="block">
+              <span class="block text-sm font-bold mb-1.5">Fish or catch name</span>
+              <input id="postCatchName" type="text" maxlength="100" class="w-full rounded-xl border-outline-variant" placeholder="Example: Bangus"/>
+            </label>
+            <label class="block">
+              <span class="block text-sm font-bold mb-1.5">Approximate area</span>
+              <input id="postCatchLocation" type="text" maxlength="120" class="w-full rounded-xl border-outline-variant" placeholder="Example: Northern Cebu coast"/>
+            </label>
+            <label class="block sm:col-span-2">
+              <span class="block text-sm font-bold mb-1.5">Catch date</span>
+              <input id="postCatchDate" type="date" class="w-full rounded-xl border-outline-variant"/>
+            </label>
+          </div>
+          <p class="text-xs text-on-surface-variant mt-3">Use an approximate area rather than private coordinates or an exact fishing spot.</p>
+        </fieldset>
+
+        <label class="block">
+          <span class="block text-sm font-extrabold text-primary mb-1.5">Catch photo <span class="font-normal text-on-surface-variant">(optional)</span></span>
+          <input id="postImage" type="file" accept="image/jpeg,image/png,image/webp" class="w-full rounded-xl border border-outline-variant p-3"/>
+          <span class="text-xs text-on-surface-variant mt-1 block">JPEG, PNG, or WebP; maximum 5 MB.</span>
+        </label>
+
+        <label class="flex items-start gap-3 rounded-xl bg-surface-container-low p-3">
+          <input id="postGuidelinesAgreement" type="checkbox" class="mt-1 rounded border-outline" required/>
+          <span class="text-sm">I will follow the community guidelines and avoid sharing private or unsafe information.</span>
+        </label>
+
+        <div class="grid grid-cols-2 gap-3 pt-2">
+          <button id="cancelPostButton" type="button" class="rounded-xl bg-surface-container-high text-primary p-4 font-extrabold">Cancel</button>
+          <button id="submitPostButton" type="submit" class="rounded-xl bg-secondary text-white p-4 font-extrabold disabled:opacity-60">Publish Post</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <!-- Discussion Modal -->
+  <div id="discussionModal" class="forum-modal" hidden role="dialog" aria-modal="true" aria-labelledby="discussionModalTitle">
+    <section class="forum-modal-card">
+      <div class="sticky top-0 bg-white border-b border-outline-variant p-4 flex items-center justify-between z-10">
+        <div>
+          <p class="text-xs uppercase tracking-widest font-extrabold text-secondary">Forum Discussion</p>
+          <h2 id="discussionModalTitle" class="text-lg font-black text-primary">Discussion</h2>
+        </div>
+        <button id="closeDiscussionButton" type="button" class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center" aria-label="Close discussion">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div id="discussionPost" class="p-5 border-b border-outline-variant"></div>
+
+      <section class="p-5">
+        <div class="flex items-center justify-between">
+          <h3 class="font-black text-primary flex items-center gap-2">
+            <span class="material-symbols-outlined">forum</span>
+            Comments
+          </h3>
+          <span id="discussionCommentCount" class="text-xs font-bold text-on-surface-variant">0 comments</span>
+        </div>
+
+        <div id="discussionComments" class="space-y-3 mt-4"></div>
+
+        <form id="commentForm" class="mt-5 rounded-xl bg-surface-container-low p-3">
+          <label class="block">
+            <span class="block text-sm font-bold text-primary mb-1.5">Join the discussion</span>
+            <textarea id="commentContent" maxlength="2000" rows="3" class="w-full rounded-xl border-outline-variant bg-white" placeholder="Write a respectful and helpful comment…" required></textarea>
+          </label>
+          <div class="flex justify-end mt-3">
+            <button id="submitCommentButton" type="submit" class="bg-secondary text-white rounded-xl px-5 py-3 font-extrabold disabled:opacity-60">
+              Post Comment
+            </button>
+          </div>
+        </form>
+      </section>
+    </section>
+  </div>
+
+  <!-- Mobile Navigation -->
+  <nav class="fixed bottom-0 left-0 w-full z-50 grid grid-cols-6 items-center px-1 py-2 bg-white border-t border-outline-variant shadow-lg rounded-t-xl">
+    <a class="flex flex-col items-center justify-center text-on-surface-variant py-1 active:scale-90" href="index.html">
+      <span class="material-symbols-outlined">dashboard</span>
+      <span class="forum-bottom-label text-[10px] font-bold">Home</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-on-surface-variant py-1 active:scale-90" href="fish-identification.html">
+      <span class="material-symbols-outlined">visibility</span>
+      <span class="forum-bottom-label text-[10px] font-bold">Fish ID</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-on-surface-variant py-1 active:scale-90" href="tides-weather.html">
+      <span class="material-symbols-outlined">hide</span>
+      <span class="forum-bottom-label text-[10px] font-bold">Tides</span>
+    </a>
+    <a class="flex flex-col items-center justify-center bg-primary-container text-white rounded-full py-1 active:scale-90" href="forum.html">
+      <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;">forum</span>
+      <span class="forum-bottom-label text-[10px] font-bold">Forum</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-on-surface-variant py-1 active:scale-90" href="announcements.html">
+      <span class="material-symbols-outlined">campaign</span>
+      <span class="forum-bottom-label text-[10px] font-bold">News</span>
+    </a>
+    <a class="flex flex-col items-center justify-center text-on-surface-variant py-1 active:scale-90" href="recipes.html">
+      <span class="material-symbols-outlined">restaurant</span>
+      <span class="forum-bottom-label text-[10px] font-bold">Recipes</span>
+    </a>
+  </nav>
+
+  <script src="weather-api.js"></script>
+<script src="marine-api.js"></script>
+<script src="safety-alerts.js"></script>
+<script src="forum.js"></script>
+  <script src="auth-ui.js"></script>
+</body>
+</html>

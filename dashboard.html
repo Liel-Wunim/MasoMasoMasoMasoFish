@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <!-- Include FontAwesome for the bell icon if you haven't already -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+    <!-- Top Navigation Bar Example -->
+    <header class="top-navbar">
+        <div class="logo">Dashboard</div>
+        
+        <div class="nav-actions">
+            <!-- Notification Bell Component -->
+            <div class="notification-container">
+                <button id="bell-button" class="bell-btn" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span id="bell-badge" class="badge">0</span>
+                </button>
+                
+                <div id="notification-dropdown" class="dropdown-menu">
+                    <!-- Dynamic weather updates inject here -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <script src="catch-log-dashboard.js"></script>
+</body>
+</html>

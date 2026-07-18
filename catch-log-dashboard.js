@@ -66,3 +66,138 @@
       empty.textContent = 'Catch log unavailable.';
     });
 })();
+
+// --- WEATHER & NOTIFICATION SETUP ---
+let weatherNotifications = [];
+const WEATHER_API_KEY = 'sb_publishable__YfC34NFu45KPAzZq0UrqQ_GSK-BuiX'; 
+
+// Coordinates default to your primary location framework context
+const LATITUDE = 9.4815;
+const LONGITUDE = 123.3808;
+
+/**
+ * Grabs real-time data from the weather endpoint
+ */
+async function checkWeatherUpdate(lat, lon) {
+    if (WEATHER_API_KEY === 'sb_publishable__YfC34NFu45KPAzZq0UrqQ_GSK-BuiX') {
+        console.warn("Please configure a valid OpenWeatherMap API key.");
+        return;
+    }
+
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${WEATHER_API_KEY}&units=metric`;
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('API down or incorrect coordinates');
+        
+        const data = await response.json();
+        addWeatherNotification(data);
+    } catch (error) {
+        console.error("Weather refresh failed:", error);
+    }
+}
+
+/**
+ * Builds the text structure and updates arrays/badges
+ */
+function addWeatherNotification(weatherData) {
+    const newAlert = {
+        id: Date.now(),
+        title: `Weather: ${weatherData.weather[0].main}`,
+        description: `It is ${weatherData.main.temp}°C with ${weatherData.weather[0].description} in ${weatherData.name}.`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        read: false
+    };
+    
+    weatherNotifications.unshift(newAlert);
+    renderNotificationBadge();
+    triggerDesktopNotification(newAlert.title, newAlert.description);
+}
+
+/**
+ * Toggles visibility counter red-dot badge
+ */
+function renderNotificationBadge() {
+    const bellBadge = document.getElementById('bell-badge');
+    if (!bellBadge) return;
+
+    const unreadCount = weatherNotifications.filter(n => !n.read).length;
+    
+    if (unreadCount > 0) {
+        bellBadge.textContent = unreadCount;
+        bellBadge.style.display = 'flex';
+    } else {
+        bellBadge.style.display = 'none';
+    }
+}
+
+/**
+ * Renders dropdown dynamic lists when open
+ */
+function toggleNotificationDropdown() {
+    const dropdown = document.getElementById('notification-dropdown');
+    if (!dropdown) return;
+
+    dropdown.classList.toggle('show');
+    
+    // Once viewed, clear active status flags
+    weatherNotifications.forEach(n => n.read = true);
+    renderNotificationBadge();
+    
+    if (weatherNotifications.length === 0) {
+        dropdown.innerHTML = '<div class="notification-item empty">No current weather updates</div>';
+        return;
+    }
+    
+    dropdown.innerHTML = weatherNotifications.map(n => `
+        <div class="notification-item">
+            <div class="notification-header">
+                <span class="notification-title">${n.title}</span>
+                <span class="notification-time">${n.time}</span>
+            </div>
+            <p class="notification-desc">${n.description}</p>
+        </div>
+    `).join('');
+}
+
+/**
+ * Pushes browser dashboard alert card frames
+ */
+function triggerDesktopNotification(title, body) {
+    if (Notification.permission === "granted") {
+        new Notification(title, { body: body });
+    }
+}
+
+// --- SETUP TRIGGERS ON BOOT ---
+document.addEventListener('DOMContentLoaded', () => {
+    const bellButton = document.getElementById('bell-button');
+    
+    if (bellButton) {
+        bellButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleNotificationDropdown();
+        });
+    }
+
+    // Dismiss active panels when clicking outside container
+    window.addEventListener('click', () => {
+        const dropdown = document.getElementById('notification-dropdown');
+        if (dropdown && dropdown.classList.contains('show')) {
+            dropdown.classList.remove('show');
+        }
+    });
+
+    // Request desktop operating system visibility permissions early
+    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+    }
+
+    // Check on startup
+    checkWeatherUpdate(LATITUDE, LONGITUDE);
+
+    // Refresh weather details every 30 minutes automatically
+    setInterval(() => {
+        checkWeatherUpdate(LATITUDE, LONGITUDE);
+    }, 1800000);
+});
